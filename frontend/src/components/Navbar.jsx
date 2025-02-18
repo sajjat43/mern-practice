@@ -4,10 +4,17 @@ import { IoCreateSharp } from "react-icons/io5";
 import { IoSunnySharp } from "react-icons/io5";
 import { MdModeNight } from "react-icons/md";
 import { Link } from "react-router-dom";
+import { CiLogin } from "react-icons/ci";
+import { useAuthContext } from '../context/AuthContext';
 // import { useProductStore } from '../store/product';
 
 const Navbar = () => {
-
+  const { dispatch } = useAuthContext();
+  const logout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    dispatch({ type: 'LOGOUT' });
+  };
   const { colorMode, toggleColorMode  } = useColorMode();
   // const {products} = useProductStore();
   return  <Container maxW={"1540px"} px={4}  >
@@ -39,6 +46,13 @@ const Navbar = () => {
           <Button onClick={toggleColorMode}>
             {colorMode === 'light'  ? <MdModeNight /> :   <IoSunnySharp />}
           </Button>
+          <Link to="/login">
+          <Button on><CiLogin  fontSize={20} /></Button>
+          </Link>
+          <Link to="/signup">
+          <Button on>Sign Up</Button>
+          </Link>
+          <button onClick={logout}>LogOut</button>
         </HStack>
     </Flex>
   </Container>
