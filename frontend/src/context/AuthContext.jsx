@@ -14,9 +14,14 @@ export const useAuthContext = () => {
 export const authReducer = (state, action) => {
     switch (action.type) {
         case 'LOGIN':
-            return { ...state, user: action.payload };
+            return { 
+                user: {
+                    ...action.payload,
+                    token: action.payload.token
+                }
+            };
         case 'LOGOUT':
-            return { ...state, user: null };
+            return { user: null };
         default:
             return state;
     }
@@ -24,7 +29,7 @@ export const authReducer = (state, action) => {
 
 export const AuthContextProvider = ({ children }) => {
     const [state, dispatch] = useReducer(authReducer, {
-        user: JSON.parse(localStorage.getItem('user')) || null
+        user: JSON.parse(localStorage.getItem('user'))
     });
     
     console.log('AuthContext state:', state);

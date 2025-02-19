@@ -17,7 +17,7 @@ import {
 } from '@chakra-ui/react';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { useAuthContext } from '../context/AuthContext';
-
+import { signInWithPopup } from '../fairbase/config';
 const Login = () => {
     const navigate = useNavigate();
     const toast = useToast();
@@ -34,6 +34,14 @@ const Login = () => {
             ...formData,
             [e.target.name]: e.target.value
         });
+    };
+    const signInWithGoogle = async () => {
+        try {
+            const result = await signInWithPopup();
+            console.log(result);
+        } catch (error) {
+            console.error(error);   
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -52,11 +60,21 @@ const Login = () => {
             const data = await response.json();
 
             if (data.success) {
-                // Save user data to localStorage
-                localStorage.setItem('user', JSON.stringify(data.data));
+                // Store both user data and token
+                localStorage.setItem('user', JSON.stringify({
+                    name: data.data.name,
+                    email: data.data.email,
+                    token: data.data.token  // Make sure to store the token
+                }));
                 
-                // Update auth context
-                dispatch({ type: 'LOGIN', payload: data.data });
+                dispatch({ 
+                    type: 'LOGIN', 
+                    payload: {
+                        name: data.data.name,
+                        email: data.data.email,
+                        token: data.data.token
+                    }
+                });
 
                 toast({
                     title: 'Welcome back!',
@@ -67,7 +85,6 @@ const Login = () => {
                     position: 'top'
                 });
                 
-                // Redirect to home page
                 navigate('/');
             } else {
                 toast({
@@ -146,6 +163,7 @@ const Login = () => {
                         Sign Up
                     </Link>
                 </Text>
+                <Button onClick={() => signInWithGoogle()}>Sign in with Google</Button>
             </VStack>
         </Box>
     );

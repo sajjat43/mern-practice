@@ -1,60 +1,111 @@
 import {create} from 'zustand'
+import axios from 'axios'
+
+const getAuthHeaders = () => {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return null;
+    
+    const user = JSON.parse(userStr);
+    if (!user || !user.token) return null;
+    
+    return {
+        headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+        }
+    };
+};
 
 export const useProductStore = create((set) => ({
     product: [],
+    isLoading: false,
+    error: null,
+
     setProduct: (products) => set({products}),
-    createProduct: async (newPrduct) => {
-        if(!newPrduct.name || !newPrduct.price || !newPrduct.image){
-            return { success:false, message:"Please fill the all field"};
+
+    createProduct: async (newProduct) => {
+        try {
+            const res = await axios.post("/api/products", newProduct, getAuthHeaders());
+            // console.log(res.data);
+            set((state) => ({ 
+                product: [...state.product, res.data.data],
+                error: null
+            }));
+            return { success: true, message: "Product created successfully" };
+        } catch (error) {
+            return { 
+                success: false, 
+                message: error.response?.data?.message || "Failed to create product" 
+            };
+        }
+    },
+
+    fetchProducts: async () => {
+        set({ isLoading: true });
+        const headers = getAuthHeaders();
+        
+        if (!headers) {
+            set({ 
+                error: "Please login first",
+                isLoading: false 
+            });
+            return { success: false, message: "Please login first" };
         }
 
-        const res = await fetch("/api/products",{
-            method:"POST",
-            headers:{
-                "Content-Type":"application/json"
-            },
-            body:JSON.stringify(newPrduct),
-        })
-        const data =await res.json();
-        console.log(data);
-        set((state) => ({product: [ ...state.product, data.data]}))
-        return {success:true, message: "Product Create successfully"}
+        try {
+            const res = await axios.get("/api/products", headers);
+            set({ 
+                product: res.data.data,
+                isLoading: false,
+                error: null
+            });
+            return { success: true };
+        } catch (error) {
+            set({ 
+                error: error.response?.data?.message || "Failed to fetch products",
+                isLoading: false 
+            });
+            return { success: false, message: error.response?.data?.message };
+        }
     },
 
-    fetchProducts: async() => {
-        const res =await fetch("/api/products");
-        const data = await res.json();
-        set({ product: data.data});
-    },
     deleteProduct: async (pid) => {
-        const res = await fetch(`/api/products/delete/${pid}`,{
-            method:"DELETE",
-        });
-        const data = await res.json();
-        console.log(data);
-        if(!data.success){
-            return {success:false, message:data.message}
+        try {
+            const res = await axios.delete(`/api/products/delete/${pid}`, getAuthHeaders());
+
+            if (res.data.success) {
+                set((state) => ({
+                    product: state.product.filter((product) => product._id !== pid),
+                    error: null
+                }));
+                return { success: true, message: res.data.message };
+            }
+            return { success: false, message: res.data.message };
+        } catch (error) {
+            set({ error: error.response?.data?.message || "Failed to delete product" });
+            return { success: false, message: error.response?.data?.message };
         }
-        set((state) => ({product: state.product.filter((product) => product._id !== pid)}));
-        return {success:true, message:data.message}
     },
+
     updateProduct: async (pid, updatedProduct) => {
-        const res = await fetch(`/api/products/update/${pid}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(updatedProduct)
-          });
-          const data = await res.json();
-          if (!data.success) {
-            return { success: false, message: data.message };
-          }
-          set((state) => ({
-            product: state.product.map((product) =>
-              product._id === pid ? data.data : product
-            )
-          }));
-          return { success: true, message: data.message };
-    }
+        try {
+            const res = await axios.put(`/api/products/update/${pid}`, updatedProduct, getAuthHeaders());
+
+            if (res.data.success) {
+                set((state) => ({
+                    product: state.product.map((product) =>
+                        product._id === pid ? res.data.data : product
+                    ),
+                    error: null
+                }));
+                return { success: true, message: res.data.message };
+            }
+            return { success: false, message: res.data.message };
+        } catch (error) {
+            set({ error: error.response?.data?.message || "Failed to update product" });
+            return { success: false, message: error.response?.data?.message };
+        }
+    },
+
+    clearError: () => set({ error: null })
 }));

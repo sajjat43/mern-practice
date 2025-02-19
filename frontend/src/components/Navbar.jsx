@@ -6,6 +6,7 @@ import { MdModeNight } from "react-icons/md";
 import { Link } from "react-router-dom";
 import { CiLogin } from "react-icons/ci";
 import { useAuthContext } from '../context/AuthContext';
+// import { useLogoutContext } from '../hook/LogoutContext';
 // import { useProductStore } from '../store/product';
 
 const Navbar = () => {
@@ -15,6 +16,13 @@ const Navbar = () => {
     localStorage.removeItem('token');
     dispatch({ type: 'LOGOUT' });
   };
+
+
+
+  const {user} = useAuthContext();
+
+
+
   const { colorMode, toggleColorMode  } = useColorMode();
   // const {products} = useProductStore();
   return  <Container maxW={"1540px"} px={4}  >
@@ -37,22 +45,31 @@ const Navbar = () => {
         bgClip={"text"} >
 
 
-           <Link to={"/"} >Product Store 🚀</Link> 
+           <Link to={"/"} >Product Store 🚀 </Link> 
         </Text>
         <HStack spacing={2} alignItems={"center"}>
-          <Link to="/create">
-          <Button on><IoCreateSharp fontSize={20} /></Button>
-          </Link>
+          {user && (
+            <Link to="/create">
+              <Button on><IoCreateSharp fontSize={20} /></Button>
+            </Link>
+          )}
           <Button onClick={toggleColorMode}>
             {colorMode === 'light'  ? <MdModeNight /> :   <IoSunnySharp />}
           </Button>
-          <Link to="/login">
-          <Button on><CiLogin  fontSize={20} /></Button>
-          </Link>
-          <Link to="/signup">
-          <Button on>Sign Up</Button>
-          </Link>
-          <button onClick={logout}>LogOut</button>
+          {!user ? (
+                <>
+                    <Link to="/login">
+                        <Button>LogIn</Button>
+                    </Link>
+                   
+                </>
+            ) : (
+                <Button onClick={logout} colorScheme="red" variant="outline">
+                    Logout
+                </Button>
+            )}
+          
+          {/* <button onClick={logout}>LogOut</button> */}
         </HStack>
     </Flex>
   </Container>
