@@ -17,7 +17,7 @@ export const authReducer = (state, action) => {
             return { 
                 user: {
                     ...action.payload,
-                    token: action.payload.token
+                    isGoogleUser: Boolean(action.payload.googleId)
                 }
             };
         case 'LOGOUT':

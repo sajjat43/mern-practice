@@ -1,24 +1,31 @@
-import express, { json } from 'express';
-import path from 'path';
-import dotenv from 'dotenv';
-import { connectDB } from './config/db.js';
+import express from 'express';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import 'dotenv/config';
+import userRoutes from './routes/user.route.js';
 import productRoutes from './routes/product.route.js';
-import userRoutes from './routes/user.js';
-
-dotenv.config();
 
 const app = express();
 
+// Middleware
+app.use(cors({
+    origin: 'http://localhost:5173', // Vite's default port
+    credentials: true
+}));
+app.use(express.json());
+
+// Routes
+app.use('/api/users', userRoutes);
+app.use('/api/products', productRoutes);
+
 const PORT = process.env.PORT || 5000;
 
-const __dirname = path.resolve();   
-
-app.use(express.json()); // allow to accept json data in the request body   
-
-app.use("/api/products", productRoutes);
-app.use("/api/users", userRoutes);
-
-app.listen(PORT, () => {
-    connectDB();
-    console.log('server start at http://localhost:' + PORT)
-});
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    })
+    .catch((error) => {
+        console.log('MongoDB connection error:', error);
+    });

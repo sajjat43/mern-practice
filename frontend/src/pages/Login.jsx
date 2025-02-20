@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { auth, provider, signInWithPopup } from '../fairbase/config';
+import { FcGoogle } from 'react-icons/fc';
+import { useAuthContext } from '../context/AuthContext';
 import {
     Box,
     Button,
@@ -7,41 +10,85 @@ import {
     FormLabel,
     Input,
     VStack,
-    Heading,
     Text,
     Link,
     useToast,
-    InputGroup,
-    InputRightElement,
-    IconButton
+    Heading,
+    Divider,
+    Center
 } from '@chakra-ui/react';
-import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
-import { useAuthContext } from '../context/AuthContext';
-import { signInWithPopup } from '../fairbase/config';
+
 const Login = () => {
     const navigate = useNavigate();
     const toast = useToast();
     const { dispatch } = useAuthContext();
-    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
         password: ''
     });
 
+    const handleGoogleLogin = async () => {
+        setIsLoading(true);
+        try {
+            const result = await signInWithPopup(auth, provider);
+            
+            const response = await fetch('/api/users/google-signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: result.user.displayName,
+                    email: result.user.email,
+                    googleId: result.user.uid,
+                    photoURL: result.user.photoURL
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Store user data in localStorage
+                localStorage.setItem('user', JSON.stringify(data.data));
+                
+                // Update auth context
+                dispatch({ type: 'LOGIN', payload: data.data });
+
+                toast({
+                    title: 'Welcome back!',
+                    description: data.message,
+                    status: 'success',
+                    duration: 3000,
+                    isClosable: true,
+                    position: 'top'
+                });
+
+                // Navigate to home page
+                navigate('/');
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            console.error('Google login error:', error);
+            toast({
+                title: 'Login Failed',
+                description: error.message || 'Failed to login with Google',
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+                position: 'top'
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleChange = (e) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value
         });
-    };
-    const signInWithGoogle = async () => {
-        try {
-            const result = await signInWithPopup();
-            console.log(result);
-        } catch (error) {
-            console.error(error);   
-        }
     };
 
     const handleSubmit = async (e) => {
@@ -60,21 +107,11 @@ const Login = () => {
             const data = await response.json();
 
             if (data.success) {
-                // Store both user data and token
-                localStorage.setItem('user', JSON.stringify({
-                    name: data.data.name,
-                    email: data.data.email,
-                    token: data.data.token  // Make sure to store the token
-                }));
+                // Store user data
+                localStorage.setItem('user', JSON.stringify(data.data));
                 
-                dispatch({ 
-                    type: 'LOGIN', 
-                    payload: {
-                        name: data.data.name,
-                        email: data.data.email,
-                        token: data.data.token
-                    }
-                });
+                // Update auth context
+                dispatch({ type: 'LOGIN', payload: data.data });
 
                 toast({
                     title: 'Welcome back!',
@@ -84,22 +121,15 @@ const Login = () => {
                     isClosable: true,
                     position: 'top'
                 });
-                
+
                 navigate('/');
             } else {
-                toast({
-                    title: 'Login Failed',
-                    description: data.message,
-                    status: 'error',
-                    duration: 3000,
-                    isClosable: true,
-                    position: 'top'
-                });
+                throw new Error(data.message);
             }
         } catch (error) {
             toast({
-                title: 'Error',
-                description: 'Something went wrong. Please try again.',
+                title: 'Login Failed',
+                description: error.message || 'Invalid email or password',
                 status: 'error',
                 duration: 3000,
                 isClosable: true,
@@ -112,58 +142,64 @@ const Login = () => {
 
     return (
         <Box maxW="md" mx="auto" mt={8} p={6} borderWidth={1} borderRadius="lg">
-            <VStack spacing={4} as="form" onSubmit={handleSubmit}>
-                <Heading>Welcome Back</Heading>
+            <VStack spacing={4}>
+                <Heading>Login</Heading>
 
-                <FormControl isRequired>
-                    <FormLabel>Email</FormLabel>
-                    <Input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="Enter your email"
-                    />
-                </FormControl>
+                <Button
+                    w="full"
+                    leftIcon={<FcGoogle />}
+                    onClick={handleGoogleLogin}
+                    variant="outline"
+                    isLoading={isLoading}
+                >
+                    Login with Google
+                </Button>
 
-                <FormControl isRequired>
-                    <FormLabel>Password</FormLabel>
-                    <InputGroup>
+                <Center w="full">
+                    <Divider />
+                    <Text px={3} color="gray.500">OR</Text>
+                    <Divider />
+                </Center>
+
+                <VStack as="form" onSubmit={handleSubmit} spacing={4} w="full">
+                    <FormControl isRequired>
+                        <FormLabel>Email</FormLabel>
                         <Input
-                            type={showPassword ? 'text' : 'password'}
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            placeholder="Enter your email"
+                        />
+                    </FormControl>
+
+                    <FormControl isRequired>
+                        <FormLabel>Password</FormLabel>
+                        <Input
+                            type="password"
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
                             placeholder="Enter your password"
                         />
-                        <InputRightElement>
-                            <IconButton
-                                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                                icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                                onClick={() => setShowPassword(!showPassword)}
-                                variant="ghost"
-                                size="sm"
-                            />
-                        </InputRightElement>
-                    </InputGroup>
-                </FormControl>
+                    </FormControl>
 
-                <Button
-                    colorScheme="blue"
-                    width="full"
-                    type="submit"
-                    isLoading={isLoading}
-                >
-                    Login
-                </Button>
+                    <Button
+                        type="submit"
+                        colorScheme="blue"
+                        w="full"
+                        isLoading={isLoading}
+                    >
+                        Login
+                    </Button>
+                </VStack>
 
                 <Text>
-                    Don&apos;t have an account?{' '}
+                    Don't have an account?{' '}
                     <Link color="blue.500" onClick={() => navigate('/signup')}>
                         Sign Up
                     </Link>
                 </Text>
-                <Button onClick={() => signInWithGoogle()}>Sign in with Google</Button>
             </VStack>
         </Box>
     );

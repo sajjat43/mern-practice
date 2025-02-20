@@ -14,8 +14,17 @@ const userSchema = new Schema({
     },
     password: {
         type: String,
-        required: true,
+        required: function() {
+            return !this.googleId; // Password only required if not Google auth
+        }
     },
+    googleId: {
+        type: String,
+        sparse: true
+    },
+    photoURL: {
+        type: String
+    }
 }, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);

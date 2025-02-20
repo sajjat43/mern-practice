@@ -139,3 +139,57 @@ export const logoutUser = async (req, res) => {
         message: "Logged out successfully"
     });
 };
+
+export const googleSignup = async (req, res) => {
+    try {
+        const { email, name, googleId, photoURL } = req.body;
+
+        // Check if user already exists
+        let user = await User.findOne({ $or: [{ email }, { googleId }] });
+        
+        if (user) {
+            // If user exists, update their Google ID if they don't have one
+            if (!user.googleId) {
+                user.googleId = googleId;
+                user.photoURL = photoURL;
+                await user.save();
+            }
+        } else {
+            // Create new user if doesn't exist
+            user = await User.create({
+                email,
+                name,
+                googleId,
+                photoURL
+            });
+        }
+
+        // Generate token
+        const token = jwt.sign(
+            { _id: user._id },
+            process.env.SECRET,
+            { expiresIn: '7d' }
+        );
+
+        // Return user data and token
+        res.status(200).json({
+            success: true,
+            message: user ? "Logged in successfully" : "Account created and logged in successfully",
+            data: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                photoURL: user.photoURL,
+                googleId: user.googleId,
+                token
+            }
+        });
+
+    } catch (error) {
+        console.error('Google auth error:', error);
+        res.status(500).json({
+            success: false,
+            message: "Server error during authentication"
+        });
+    }
+};
